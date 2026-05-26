@@ -45,10 +45,10 @@ def generate_image(prompt):
         quality="medium",
         n=1
     )
-    return response.data[0].url
+    return response.data[0].b64_json
 
 
-def post_to_pinterest(image_url, prompt):
+def post_to_pinterest(image_b64, prompt):
     title = prompt[:50]
     description = (
         f"{prompt} #tattoo #tattoodesign #tattooart #tattooflash #tattooideas #tattooinspo"
@@ -58,8 +58,9 @@ def post_to_pinterest(image_url, prompt):
         "title": title,
         "description": description,
         "media_source": {
-            "source_type": "image_url",
-            "url": image_url
+            "source_type": "image_base64",
+            "content_type": "image/png",
+            "data": image_b64
         }
     }
     headers = {
@@ -88,15 +89,15 @@ def main():
 
     print("Generating image with DALL-E 3...")
     try:
-        image_url = generate_image(prompt)
+        image_b64 = generate_image(prompt)
     except Exception as e:
         print(f"ERROR: Failed to generate image: {e}", file=sys.stderr)
         sys.exit(1)
-    print(f"Image URL: {image_url}")
+    print("Image generated (base64)")
 
     print("Posting to Pinterest...")
     try:
-        result = post_to_pinterest(image_url, prompt)
+        result = post_to_pinterest(image_b64, prompt)
     except requests.HTTPError as e:
         print(f"ERROR: Pinterest API returned {e.response.status_code}: {e.response.text}", file=sys.stderr)
         sys.exit(1)
