@@ -12,7 +12,7 @@ PINTEREST_EMAIL = os.environ["PINTEREST_EMAIL"]
 PINTEREST_PASSWORD = os.environ["PINTEREST_PASSWORD"]
 PINTEREST_BOARD_NAME = os.environ["PINTEREST_BOARD_NAME"]
 
-SDXL_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+SDXL_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
