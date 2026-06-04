@@ -27,7 +27,6 @@ jobs:
       - name: Generate and post tattoo
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
           PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
           PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
           PINTEREST_BOARD_NAME: ${{ secrets.PINTEREST_BOARD_NAME }}
