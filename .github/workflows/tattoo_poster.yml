@@ -1,6 +1,8 @@
 name: Tattoo Pinterest Poster
 
 on:
+  schedule:
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -17,11 +19,24 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install openai requests
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
 
       - name: Generate and post tattoo
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
-          PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
+          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+          PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
+          PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
+          PINTEREST_BOARD_NAME: ${{ secrets.PINTEREST_BOARD_NAME }}
         run: python scripts/generate_and_post.py
+
+      - name: Upload error screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshot
+          path: /tmp/error_screenshot.png
+          if-no-files-found: ignore
