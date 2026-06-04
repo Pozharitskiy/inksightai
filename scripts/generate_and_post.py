@@ -2,6 +2,7 @@ import os
 import sys
 import base64
 import tempfile
+import random
 from openai import OpenAI
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
@@ -25,12 +26,9 @@ def generate_prompt():
             {
                 "role": "user",
                 "content": (
-                    "Generate a tattoo image generation prompt for a 2x2 grid of 4 design variations.\n"
-                    "Randomly pick one theme from: wolf, skull, snake, eagle, rose, dragon, "
-                    "koi fish, phoenix, lion, geometric mandala, butterfly, raven, bear, "
-                    "compass, anchor, lettering.\n"
-                    "Randomly pick one style from: blackwork, fine line, traditional american, "
-                    "neo-traditional, watercolor, dotwork, japanese, celtic, ornamental.\n"
+                    f"Generate a tattoo image generation prompt for a 2x2 grid of 4 design variations.\n"
+                    f"Use this theme: {random.choice(['wolf', 'skull', 'snake', 'eagle', 'rose', 'dragon', 'koi fish', 'phoenix', 'lion', 'geometric mandala', 'butterfly', 'raven', 'bear', 'compass', 'anchor', 'lettering'])}.\n"
+                    f"Use this style: {random.choice(['blackwork', 'fine line', 'traditional american', 'neo-traditional', 'watercolor', 'dotwork', 'japanese', 'celtic', 'ornamental'])}.\n"
                     "Format: 2x2 grid of 4 different [subject] tattoo design variations, "
                     "[style] tattoo style, each variation slightly different pose or composition, "
                     "intricate details, high contrast, pure white background, flat lay, PNG format.\n"
