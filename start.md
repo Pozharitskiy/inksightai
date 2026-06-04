@@ -62,3 +62,5 @@ scripts/generate_and_post.py
 1. Exact GitHub Secrets I need to add and where to get them
 2. How to get Pinterest Board ID
 3. How to get Pinterest Access Token (which scopes needed)
+
+OPENAI_API_KEY="..." HUGGINGFACE_TOKEN="hf_..." PINTEREST_EMAIL="..." PINTEREST_PASSWORD="..." PINTEREST_BOARD_NAME="Tattoo Ideas" python3 scripts/generate_and_post.py

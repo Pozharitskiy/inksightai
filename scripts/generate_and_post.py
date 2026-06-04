@@ -7,11 +7,12 @@ from openai import OpenAI
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+HUGGINGFACE_TOKEN = os.environ["HUGGINGFACE_TOKEN"]
 PINTEREST_EMAIL = os.environ["PINTEREST_EMAIL"]
 PINTEREST_PASSWORD = os.environ["PINTEREST_PASSWORD"]
 PINTEREST_BOARD_NAME = os.environ["PINTEREST_BOARD_NAME"]
 
-POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024&nologo=true&model=flux"
+HF_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -47,28 +48,32 @@ def generate_prompt():
 
 
 def generate_image(prompt):
-    print("=== Step 2: Generating image via Pollinations.ai ===")
-    import urllib.parse
-    encoded = urllib.parse.quote(prompt)
-    url = POLLINATIONS_URL.format(prompt=encoded)
+    print("=== Step 2: Generating image via Hugging Face ===")
+    headers = {"Authorization": f"Bearer {HUGGINGFACE_TOKEN}"}
+    payload = {"inputs": prompt}
 
-    max_retries = 3
+    max_retries = 5
     for attempt in range(1, max_retries + 1):
         print(f"Attempt {attempt}/{max_retries}...")
-        response = requests.get(url, timeout=120)
+        response = requests.post(HF_URL, headers=headers, json=payload, timeout=120)
 
-        if response.status_code == 200 and response.headers.get("content-type", "").startswith("image"):
+        if response.status_code == 200:
             tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
             tmp.write(response.content)
             tmp.close()
             print(f"Image saved to: {tmp.name} ({len(response.content)} bytes)")
             return tmp.name
 
-        wait = 10 * attempt
-        print(f"Got {response.status_code}, waiting {wait}s...")
-        time.sleep(wait)
+        if response.status_code == 503:
+            wait = 20 * attempt
+            print(f"Model loading (503), waiting {wait}s...")
+            time.sleep(wait)
+            continue
 
-    print("ERROR: Pollinations failed after retries", file=sys.stderr)
+        print(f"ERROR: HuggingFace returned {response.status_code}: {response.text[:200]}", file=sys.stderr)
+        sys.exit(1)
+
+    print("ERROR: HuggingFace model failed to load after retries", file=sys.stderr)
     sys.exit(1)
 
 
