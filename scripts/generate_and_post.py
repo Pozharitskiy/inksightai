@@ -29,14 +29,15 @@ def generate_prompt():
             {
                 "role": "user",
                 "content": (
-                    "Generate a tattoo image generation prompt.\n"
+                    "Generate a tattoo image generation prompt for a 2x2 grid of 4 design variations.\n"
                     "Randomly pick one theme from: wolf, skull, snake, eagle, rose, dragon, "
                     "koi fish, phoenix, lion, geometric mandala, butterfly, raven, bear, "
                     "compass, anchor, lettering.\n"
                     "Randomly pick one style from: blackwork, fine line, traditional american, "
                     "neo-traditional, watercolor, dotwork, japanese, celtic, ornamental.\n"
-                    "Format: [subject], [style] tattoo style, intricate details, "
-                    "high contrast, pure white background, PNG format.\n"
+                    "Format: 2x2 grid of 4 different [subject] tattoo design variations, "
+                    "[style] tattoo style, each variation slightly different pose or composition, "
+                    "intricate details, high contrast, pure white background, flat lay, PNG format.\n"
                     "Return ONLY the prompt."
                 )
             }
@@ -97,22 +98,35 @@ def post_to_pinterest(image_path, prompt):
             # Login
             print("Navigating to Pinterest login...")
             page.goto("https://www.pinterest.com/login/", wait_until="networkidle")
+
+            # Dismiss cookie dialog if present
+            try:
+                page.wait_for_selector('text="Accept all"', timeout=5000)
+                page.click('text="Accept all"')
+                print("Accepted cookies")
+                page.wait_for_timeout(1000)
+            except PlaywrightTimeoutError:
+                pass
+
             page.wait_for_selector('input[name="id"]', timeout=15000)
             page.fill('input[name="id"]', PINTEREST_EMAIL)
             page.fill('input[name="password"]', PINTEREST_PASSWORD)
             page.click('button[type="submit"]')
             print("Submitted login form...")
-            page.wait_for_url("**/", timeout=20000)
+
+            # Wait for logged-in state — home feed or profile nav
+            page.wait_for_selector('[data-test-id="header-profile"]', timeout=25000)
             print("Logged in successfully")
 
             # Navigate to pin creation
             print("Navigating to pin creation tool...")
-            page.goto("https://www.pinterest.com/pin-creation-tool/", wait_until="networkidle")
+            page.goto("https://www.pinterest.com/pin-creation-tool/", wait_until="domcontentloaded")
+            page.wait_for_timeout(3000)
 
-            # Upload image
+            # Upload image (input is hidden, use force)
             print("Uploading image...")
-            page.wait_for_selector('input[type="file"]', timeout=15000)
-            page.set_input_files('input[type="file"]', image_path)
+            page.wait_for_selector('input[type="file"]', timeout=15000, state="attached")
+            page.locator('input[type="file"]').set_input_files(image_path)
             print("Image uploaded")
 
             # Wait for image to process
@@ -120,43 +134,46 @@ def post_to_pinterest(image_path, prompt):
 
             # Fill title
             print("Filling title...")
-            title_selector = '[placeholder="Add your title"]'
-            page.wait_for_selector(title_selector, timeout=15000)
-            page.click(title_selector)
-            page.fill(title_selector, title)
+            page.wait_for_selector('#storyboard-selector-title', timeout=15000, state="visible")
+            page.fill('#storyboard-selector-title', title)
+            print(f"Title filled: {title}")
 
-            # Fill description
+            # Fill description (contenteditable div)
             print("Filling description...")
-            desc_selector = '[placeholder="Tell everyone what your Pin is about"]'
-            page.wait_for_selector(desc_selector, timeout=10000)
-            page.click(desc_selector)
-            page.fill(desc_selector, description)
+            page.wait_for_selector('div[contenteditable="true"]', timeout=10000, state="visible")
+            page.click('div[contenteditable="true"]')
+            page.keyboard.type(description)
+            print("Description filled")
 
-            # Select board
+            # Select board — scroll down first so it's visible
             print(f"Selecting board: {PINTEREST_BOARD_NAME}...")
-            board_selector = '[data-test-id="board-dropdown-select-button"]'
-            page.wait_for_selector(board_selector, timeout=10000)
-            page.click(board_selector)
+            page.keyboard.press("End")
+            page.wait_for_timeout(1000)
+            board_btn = page.get_by_text("Выберите доску", exact=False).or_(
+                page.get_by_text("Choose a board", exact=False)
+            ).first
+            board_btn.wait_for(timeout=10000, state="visible")
+            board_btn.click()
+            page.wait_for_timeout(1000)
 
             # Search for board
-            page.wait_for_selector('[placeholder="Search"]', timeout=5000)
-            page.fill('[placeholder="Search"]', PINTEREST_BOARD_NAME)
+            search = page.locator('input[placeholder*="Поиск"]').or_(
+                page.locator('input[placeholder*="Search"]')
+            ).first
+            search.wait_for(timeout=5000, state="visible")
+            search.fill(PINTEREST_BOARD_NAME)
             page.wait_for_timeout(1000)
 
             # Click the board option
-            board_option = page.locator(f'[data-test-id="board-option"] >> text="{PINTEREST_BOARD_NAME}"').first
-            board_option.wait_for(timeout=10000)
+            board_option = page.get_by_text(PINTEREST_BOARD_NAME, exact=True).last
+            board_option.wait_for(timeout=10000, state="visible")
             board_option.click()
             print("Board selected")
 
             # Publish
             print("Publishing pin...")
-            publish_btn = page.locator('[data-test-id="board-dropdown-save-button"]')
-            publish_btn.wait_for(timeout=10000)
-            publish_btn.click()
-
-            # Wait for success
-            page.wait_for_selector('[data-test-id="pin-saved-success"]', timeout=20000)
+            page.locator('button:has-text("Опубликовать"), button:has-text("Publish")').first.click()
+            page.wait_for_timeout(5000)
             print("SUCCESS: Pin published!")
 
         except PlaywrightTimeoutError as e:
