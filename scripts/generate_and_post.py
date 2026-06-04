@@ -1,18 +1,14 @@
 import os
 import sys
-import time
+import base64
 import tempfile
-import requests
 from openai import OpenAI
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-HUGGINGFACE_TOKEN = os.environ["HUGGINGFACE_TOKEN"]
 PINTEREST_EMAIL = os.environ["PINTEREST_EMAIL"]
 PINTEREST_PASSWORD = os.environ["PINTEREST_PASSWORD"]
 PINTEREST_BOARD_NAME = os.environ["PINTEREST_BOARD_NAME"]
-
-HF_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -49,33 +45,20 @@ def generate_prompt():
 
 
 def generate_image(prompt):
-    print("=== Step 2: Generating image via Hugging Face ===")
-    headers = {"Authorization": f"Bearer {HUGGINGFACE_TOKEN}"}
-    payload = {"inputs": prompt}
-
-    max_retries = 5
-    for attempt in range(1, max_retries + 1):
-        print(f"Attempt {attempt}/{max_retries}...")
-        response = requests.post(HF_URL, headers=headers, json=payload, timeout=120)
-
-        if response.status_code == 200:
-            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-            tmp.write(response.content)
-            tmp.close()
-            print(f"Image saved to: {tmp.name} ({len(response.content)} bytes)")
-            return tmp.name
-
-        if response.status_code == 503:
-            wait = 20 * attempt
-            print(f"Model loading (503), waiting {wait}s...")
-            time.sleep(wait)
-            continue
-
-        print(f"ERROR: HuggingFace returned {response.status_code}: {response.text[:200]}", file=sys.stderr)
-        sys.exit(1)
-
-    print("ERROR: HuggingFace model failed to load after retries", file=sys.stderr)
-    sys.exit(1)
+    print("=== Step 2: Generating image via OpenAI gpt-image-1 ===")
+    response = client.images.generate(
+        model="gpt-image-1",
+        prompt=prompt,
+        size="1024x1024",
+        quality="medium",
+        n=1
+    )
+    img_bytes = base64.b64decode(response.data[0].b64_json)
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    tmp.write(img_bytes)
+    tmp.close()
+    print(f"Image saved to: {tmp.name} ({len(img_bytes)} bytes)")
+    return tmp.name
 
 
 def post_to_pinterest(image_path, prompt):
